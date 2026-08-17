@@ -201,6 +201,7 @@
     gap: 10px;
   }
   .element {
+    position: relative;
     background: var(--tile);
     border: 1px solid #34405c;
     border-radius: 12px;
@@ -218,6 +219,24 @@
   .element .emoji { font-size: 32px; line-height: 1; }
   .element .name { font-size: 12.5px; font-weight: 600; text-align: center; }
   .element.base { border-color: #4a6; box-shadow: inset 0 0 0 1px rgba(94,234,212,0.25); }
+  .element.deadend { border-style: dashed; border-color: #4a5675; }
+  .element.deadend .emoji { opacity: 0.7; }
+  .element .flag {
+    position: absolute;
+    top: 4px; right: 4px;
+    width: 17px; height: 17px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; line-height: 1;
+    color: #ffd9a0;
+    background: #3a2f1c;
+    border: 1px solid #6b5220;
+  }
+  .legend { font-size: 11px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  .legend .flag.inline {
+    position: static; display: inline-flex; width: 15px; height: 15px;
+    vertical-align: -3px; font-size: 11px;
+  }
 
   @keyframes pop {
     0% { transform: scale(0.6); opacity: 0; }
@@ -280,7 +299,7 @@
 </div>
 
 <div class="shelf-wrap">
-  <div class="shelf-head">Your Elements</div>
+  <div class="shelf-head">Your Elements <span class="legend"><span class="flag inline">⊘</span> = dead end · can't be combined further</span></div>
   <div class="shelf" id="shelf"></div>
 </div>
 
@@ -323,7 +342,9 @@ const EMOJI = {
   plant:'🌱', tree:'🌳', forest:'🌲', metal:'🔩', sand:'🟨',
   glass:'🪟', ice:'🧊', storm:'🌩️', lightning:'⚡', rust:'🟧',
   ash:'⬛', sun:'☀️', moon:'🌙', salt:'🧂', beach:'🏖️',
-  life:'🧬', volcano:'🌋', earthquake:'🏚️'
+  life:'🧬', volcano:'🌋', earthquake:'🏚️',
+  rainbow:'🌈', snow:'❄️', river:'🏞️', wave:'💦', desert:'🏜️',
+  coal:'⚫', steel:'⚙️', diamond:'💎', fish:'🐟', island:'🏝️'
 };
 
 // Recipes: sorted pair "a+b" -> result
@@ -357,7 +378,18 @@ const RAW_RECIPES = {
   'ocean+sand':'beach',
   'lightning+ocean':'life',
   'lava+mountain':'volcano',
-  'energy+mountain':'earthquake'
+  'energy+mountain':'earthquake',
+  // --- expansion pack (adds 10 substances; older turn-in codes stay valid) ---
+  'rain+sun':'rainbow',
+  'cloud+ice':'snow',
+  'mountain+rain':'river',
+  'ocean+storm':'wave',
+  'sand+sun':'desert',
+  'forest+volcano':'coal',
+  'coal+metal':'steel',
+  'coal+earthquake':'diamond',
+  'life+ocean':'fish',
+  'ocean+volcano':'island'
 };
 delete RAW_RECIPES['ash+fire'];
 
@@ -375,6 +407,12 @@ for (const k in RAW_RECIPES){
 const ALL = new Set(BASE);
 for (const k in RECIPES) ALL.add(RECIPES[k]);
 const TOTAL = ALL.size - BASE.length; // discoverable (non-base) count
+
+// A "dead end" is an element that never appears as an ingredient in any recipe,
+// so it can't be combined into anything new. Computed from the recipe table.
+const INGREDIENTS = new Set();
+for (const k in RECIPES){ const [a,b] = k.split('+'); INGREDIENTS.add(a); INGREDIENTS.add(b); }
+const DEAD_ENDS = new Set([...ALL].filter(e => !INGREDIENTS.has(e)));
 
 /* ---------- State ---------- */
 const SAVE_KEY = 'element-lab-v1';
@@ -412,8 +450,11 @@ function renderShelf(){
   });
   for (const name of items){
     const div = document.createElement('div');
-    div.className = 'element' + (BASE.includes(name) ? ' base' : '');
-    div.innerHTML = `<span class="emoji">${EMOJI[name]||'❓'}</span><span class="name">${titleCase(name)}</span>`;
+    const dead = DEAD_ENDS.has(name);
+    div.className = 'element' + (BASE.includes(name) ? ' base' : '') + (dead ? ' deadend' : '');
+    if (dead) div.title = 'Dead end — this can\'t be combined into anything new';
+    div.innerHTML = `${dead ? '<span class="flag" aria-label="dead end">⊘</span>' : ''}`
+      + `<span class="emoji">${EMOJI[name]||'❓'}</span><span class="name">${titleCase(name)}</span>`;
     div.addEventListener('click', ()=> pick(name));
     shelfEl.appendChild(div);
   }
