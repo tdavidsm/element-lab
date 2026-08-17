@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Element Lab</title>
+<style>
+  :root {
+    --bg: #0f1724;
+    --panel: #1b2436;
+    --panel-2: #232f47;
+    --accent: #5eead4;
+    --accent-2: #38bdf8;
+    --text: #e8edf7;
+    --muted: #8ea0bd;
+    --tile: #2b3752;
+    --tile-hover: #354468;
+    --new: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(1200px 600px at 20% -10%, #1e2b45 0%, var(--bg) 55%);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  header {
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #2b3752;
+    background: rgba(15,23,36,0.7);
+    backdrop-filter: blur(6px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 20px;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+  header h1 .logo { color: var(--accent); }
+  .counter {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .counter b { color: var(--text); font-size: 16px; }
+  .progress-track {
+    width: 140px; height: 8px;
+    background: #2b3752; border-radius: 999px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.4s ease;
+  }
+  button.tool {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid #34405c;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.tool:hover { background: #2c3a58; }
+  button.tool.primary {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: #06121a;
+    border: none;
+    font-weight: 700;
+  }
+  button.tool.primary:hover { filter: brightness(1.08); }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(5,9,16,0.72);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--panel);
+    border: 1px solid #34405c;
+    border-radius: 16px;
+    padding: 22px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal h2 { margin: 0 0 4px; font-size: 19px; }
+  .modal p.sub { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; letter-spacing: 0.4px; }
+  .field input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 9px;
+    border: 1px solid #3a4a6c;
+    background: var(--panel-2);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .field input:focus { outline: none; border-color: var(--accent-2); }
+  .field .err { color: #f87171; font-size: 12px; margin-top: 4px; min-height: 14px; }
+  .code-box {
+    margin-top: 6px;
+    background: #0c1320;
+    border: 1px solid #2b3752;
+    border-radius: 9px;
+    padding: 11px 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--accent);
+    word-break: break-all;
+    max-height: 120px;
+    overflow: auto;
+  }
+  .modal-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .modal-actions .grow { flex: 1; }
+  .copied-note { color: var(--accent); font-size: 13px; margin-top: 8px; min-height: 16px; }
+
+  /* Combining area */
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 20px 10px;
+    gap: 14px;
+  }
+  .slots {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .slot {
+    width: 128px; height: 128px;
+    border-radius: 16px;
+    border: 2px dashed #3a4a6c;
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    transition: transform 0.15s ease, border-color 0.2s ease;
+  }
+  .slot.filled {
+    border-style: solid;
+    border-color: var(--accent-2);
+    color: var(--text);
+    cursor: pointer;
+  }
+  .slot .emoji { font-size: 46px; line-height: 1; }
+  .slot .lbl { font-size: 14px; font-weight: 600; }
+  .op { font-size: 30px; color: var(--muted); }
+  .combine-result {
+    min-height: 30px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .combine-result.new { color: var(--new); }
+  .combine-result.known { color: var(--accent); }
+  .combine-result.fail { color: var(--muted); }
+
+  /* Element shelf */
+  .shelf-wrap {
+    flex: 1;
+    padding: 6px 20px 30px;
+  }
+  .shelf-head {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin: 14px 4px 10px;
+  }
+  .shelf {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 10px;
+  }
+  .element {
+    background: var(--tile);
+    border: 1px solid #34405c;
+    border-radius: 12px;
+    padding: 12px 6px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s ease, background 0.15s ease;
+  }
+  .element:hover { background: var(--tile-hover); transform: translateY(-2px); }
+  .element:active { transform: translateY(0); }
+  .element .emoji { font-size: 32px; line-height: 1; }
+  .element .name { font-size: 12.5px; font-weight: 600; text-align: center; }
+  .element.base { border-color: #4a6; box-shadow: inset 0 0 0 1px rgba(94,234,212,0.25); }
+
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  .pop { animation: pop 0.4s ease; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--new);
+    color: #1a1300;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 15px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 50;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 12px;
+    border-top: 1px solid #2b3752;
+  }
+
+  @media (max-width: 480px) {
+    .slot { width: 96px; height: 96px; }
+    .slot .emoji { font-size: 34px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="logo">⚗️ Element Lab</span></h1>
+  <div class="counter">
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+    <span><b id="foundCount">0</b> / <span id="totalCount">0</span> discovered</span>
+    <button class="tool primary" id="turninBtn">📋 Turn in</button>
+    <button class="tool" id="resetBtn">Reset</button>
+  </div>
+</header>
+
+<div class="stage">
+  <div class="slots">
+    <div class="slot" id="slotA" data-slot="0"><span class="hint">Pick an<br>element</span></div>
+    <div class="op">+</div>
+    <div class="slot" id="slotB" data-slot="1"><span class="hint">Pick a<br>second one</span></div>
+  </div>
+  <div class="combine-result" id="result">Tap two elements below to combine them.</div>
+</div>
+
+<div class="shelf-wrap">
+  <div class="shelf-head">Your Elements</div>
+  <div class="shelf" id="shelf"></div>
+</div>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h2>Turn in your work</h2>
+    <p class="sub">Enter your name and school email, then copy your turn-in code into the assignment.</p>
+    <div class="field">
+      <label>YOUR NAME</label>
+      <input type="text" id="nameInput" placeholder="Jordan Rivera" autocomplete="name">
+    </div>
+    <div class="field">
+      <label>SCHOOL EMAIL</label>
+      <input type="email" id="emailInput" placeholder="jordan.rivera@school.edu" autocomplete="email">
+      <div class="err" id="idErr"></div>
+    </div>
+    <div class="field" id="codeField" style="display:none;">
+      <label>YOUR TURN-IN CODE — copy all of this</label>
+      <div class="code-box" id="codeBox"></div>
+      <div class="copied-note" id="copiedNote"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="tool primary grow" id="genBtn">Generate my code</button>
+      <button class="tool" id="copyBtn" style="display:none;">Copy</button>
+      <button class="tool" id="closeModalBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<footer>Start with the four classical elements and discover them all. Progress saves automatically.</footer>
+
+<script>
+/* ---------- Data ---------- */
+const EMOJI = {
+  air:'💨', water:'💧', fire:'🔥', earth:'🌍',
+  steam:'♨️', lava:'🔴', energy:'💥', mud:'🟤', rain:'🌧️', dust:'🟫',
+  ocean:'🌊', mountain:'⛰️', stone:'🪨', cloud:'☁️', sky:'🌤️',
+  plant:'🌱', tree:'🌳', forest:'🌲', metal:'🔩', sand:'🟨',
+  glass:'🪟', ice:'🧊', storm:'🌩️', lightning:'⚡', rust:'🟧',
+  ash:'⬛', sun:'☀️', moon:'🌙', salt:'🧂', beach:'🏖️',
+  life:'🧬', volcano:'🌋', earthquake:'🏚️'
+};
+
+// Recipes: sorted pair "a+b" -> result
+const RAW_RECIPES = {
+  'fire+water':'steam',
+  'earth+fire':'lava',
+  'air+fire':'energy',
+  'earth+water':'mud',
+  'air+water':'rain',
+  'air+earth':'dust',
+  'water+water':'ocean',
+  'earth+earth':'mountain',
+  'lava+water':'stone',
+  'air+steam':'cloud',
+  'air+cloud':'sky',
+  'earth+rain':'plant',
+  'plant+plant':'tree',
+  'tree+tree':'forest',
+  'fire+stone':'metal',
+  'stone+water':'sand',
+  'fire+sand':'glass',
+  'air+ocean':'ice',
+  'cloud+energy':'storm',
+  'air+storm':'lightning',
+  'metal+rain':'rust',
+  'ash+fire':'ash',        // placeholder overwritten below
+  'fire+plant':'ash',
+  'energy+sky':'sun',
+  'sky+stone':'moon',
+  'ocean+sun':'salt',
+  'ocean+sand':'beach',
+  'lightning+ocean':'life',
+  'lava+mountain':'volcano',
+  'energy+mountain':'earthquake'
+};
+delete RAW_RECIPES['ash+fire'];
+
+const BASE = ['air','water','fire','earth'];
+
+// Normalize a recipe key so order doesn't matter
+function key(a, b){ return [a,b].sort().join('+'); }
+const RECIPES = {};
+for (const k in RAW_RECIPES){
+  const [a,b] = k.split('+');
+  RECIPES[key(a,b)] = RAW_RECIPES[k];
+}
+
+// Every element that can exist = bases + all results
+const ALL = new Set(BASE);
+for (const k in RECIPES) ALL.add(RECIPES[k]);
+const TOTAL = ALL.size - BASE.length; // discoverable (non-base) count
+
+/* ---------- State ---------- */
+const SAVE_KEY = 'element-lab-v1';
+let discovered;   // Set of element names the student has
+let selection = [null, null];
+
+function load(){
+  try {
+    const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (Array.isArray(raw) && raw.length) return new Set(raw);
+  } catch(e){}
+  return new Set(BASE);
+}
+function save(){
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify([...discovered])); } catch(e){}
+}
+
+/* ---------- Rendering ---------- */
+const shelfEl = document.getElementById('shelf');
+const slotEls = [document.getElementById('slotA'), document.getElementById('slotB')];
+const resultEl = document.getElementById('result');
+const foundCountEl = document.getElementById('foundCount');
+const totalCountEl = document.getElementById('totalCount');
+const progressFill = document.getElementById('progressFill');
+const toastEl = document.getElementById('toast');
+
+function titleCase(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function renderShelf(){
+  shelfEl.innerHTML = '';
+  const items = [...discovered].sort((a,b)=>{
+    const ab = BASE.includes(a), bb = BASE.includes(b);
+    if (ab !== bb) return ab ? -1 : 1;      // bases first
+    return a.localeCompare(b);
+  });
+  for (const name of items){
+    const div = document.createElement('div');
+    div.className = 'element' + (BASE.includes(name) ? ' base' : '');
+    div.innerHTML = `<span class="emoji">${EMOJI[name]||'❓'}</span><span class="name">${titleCase(name)}</span>`;
+    div.addEventListener('click', ()=> pick(name));
+    shelfEl.appendChild(div);
+  }
+}
+
+function renderSlots(){
+  slotEls.forEach((el, i)=>{
+    const name = selection[i];
+    if (name){
+      el.classList.add('filled');
+      el.innerHTML = `<span class="emoji">${EMOJI[name]||'❓'}</span><span class="lbl">${titleCase(name)}</span>`;
+    } else {
+      el.classList.remove('filled');
+      el.innerHTML = `<span class="hint">${i===0?'Pick an<br>element':'Pick a<br>second one'}</span>`;
+    }
+  });
+}
+
+function renderCounter(){
+  const found = [...discovered].filter(e=>!BASE.includes(e)).length;
+  foundCountEl.textContent = found;
+  totalCountEl.textContent = TOTAL;
+  progressFill.style.width = (found / TOTAL * 100) + '%';
+}
+
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> toastEl.classList.remove('show'), 2200);
+}
+
+/* ---------- Interaction ---------- */
+function pick(name){
+  if (selection[0] === null){ selection[0] = name; }
+  else if (selection[1] === null){ selection[1] = name; combine(); return; }
+  else { selection = [name, null]; resultEl.textContent = ''; resultEl.className = 'combine-result'; }
+  renderSlots();
+}
+
+function combine(){
+  renderSlots();
+  const [a,b] = selection;
+  const res = RECIPES[key(a,b)];
+  if (!res){
+    resultEl.textContent = `${titleCase(a)} + ${titleCase(b)} … nothing happens. Try another pair!`;
+    resultEl.className = 'combine-result fail';
+  } else if (discovered.has(res)){
+    resultEl.innerHTML = `${EMOJI[res]} You already have <b>${titleCase(res)}</b>.`;
+    resultEl.className = 'combine-result known';
+  } else {
+    discovered.add(res);
+    save();
+    renderShelf(); renderCounter();
+    resultEl.innerHTML = `${EMOJI[res]} New discovery: <b>${titleCase(res)}</b>!`;
+    resultEl.className = 'combine-result new';
+    showToast(`🎉 Discovered ${titleCase(res)}!`);
+    // pop-animate the new tile
+    requestAnimationFrame(()=>{
+      const tiles = shelfEl.querySelectorAll('.element .name');
+      tiles.forEach(t=>{ if (t.textContent === titleCase(res)) t.parentElement.classList.add('pop'); });
+    });
+    if ([...discovered].filter(e=>!BASE.includes(e)).length === TOTAL){
+      setTimeout(()=> showToast('🏆 You discovered everything! Amazing!'), 800);
+    }
+  }
+  // clear slots shortly after so the next combine is easy
+  setTimeout(()=>{ selection = [null, null]; renderSlots(); }, 900);
+}
+
+// Clicking a filled slot clears just that slot
+slotEls.forEach((el, i)=> el.addEventListener('click', ()=>{
+  if (selection[i]){ selection[i] = null; renderSlots(); resultEl.className='combine-result'; }
+}));
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if (confirm('Reset all progress and start over with the four elements?')){
+    discovered = new Set(BASE);
+    selection = [null, null];
+    save(); renderShelf(); renderSlots(); renderCounter();
+    resultEl.textContent = 'Progress reset. Tap two elements to combine.';
+    resultEl.className = 'combine-result';
+  }
+});
+
+/* ---------- Turn-in code (shared codec with teacher.html) ---------- */
+// NOTE: obfuscation only. The secret lives in this file, so this deters
+// casual cheating but is not cryptographically secure. See teacher.html.
+const CODEC_SECRET = 'elab-turnin-key-2024';
+const CODEC_SEED = 0x5eed;
+
+function cyrb53(str, seed){
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i=0, ch; i<str.length; i++){
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1>>>0)).toString(36);
+}
+function b64urlEncode(bin){ return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+function xorBytes(bytes, keyStr){
+  const out = new Uint8Array(bytes.length);
+  for (let i=0;i<bytes.length;i++) out[i] = bytes[i] ^ keyStr.charCodeAt(i % keyStr.length);
+  return out;
+}
+function encodeTurnin(payload){
+  const str = JSON.stringify(payload);
+  const blob = cyrb53(str, CODEC_SEED) + '|' + str;
+  const xored = xorBytes(new TextEncoder().encode(blob), CODEC_SECRET);
+  let bin = '';
+  for (const b of xored) bin += String.fromCharCode(b);
+  return 'ELAB1' + b64urlEncode(bin);
+}
+
+/* ---------- Turn-in modal ---------- */
+const modal = document.getElementById('modal');
+const nameInput = document.getElementById('nameInput');
+const emailInput = document.getElementById('emailInput');
+const idErr = document.getElementById('idErr');
+const codeField = document.getElementById('codeField');
+const codeBox = document.getElementById('codeBox');
+const copiedNote = document.getElementById('copiedNote');
+const genBtn = document.getElementById('genBtn');
+const copyBtn = document.getElementById('copyBtn');
+
+const IDENT_KEY = 'element-lab-ident';
+function loadIdent(){
+  try { return JSON.parse(localStorage.getItem(IDENT_KEY)) || {}; } catch(e){ return {}; }
+}
+function saveIdent(){
+  try { localStorage.setItem(IDENT_KEY, JSON.stringify({ name: nameInput.value.trim(), email: emailInput.value.trim() })); } catch(e){}
+}
+
+function openModal(){
+  const id = loadIdent();
+  nameInput.value = id.name || '';
+  emailInput.value = id.email || '';
+  idErr.textContent = '';
+  codeField.style.display = 'none';
+  copyBtn.style.display = 'none';
+  copiedNote.textContent = '';
+  modal.classList.add('open');
+  nameInput.focus();
+}
+function closeModal(){ modal.classList.remove('open'); }
+
+function generateCode(){
+  const name = nameInput.value.trim();
+  const email = emailInput.value.trim();
+  if (!name){ idErr.textContent = 'Please enter your name.'; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ idErr.textContent = 'Please enter a valid email address.'; return; }
+  idErr.textContent = '';
+  saveIdent();
+  const found = [...discovered].filter(e => !BASE.includes(e)).sort();
+  const payload = { v:1, n:name, e:email, c:found.length, d:found, t:Date.now() };
+  const code = encodeTurnin(payload);
+  codeBox.textContent = code;
+  codeField.style.display = 'block';
+  copyBtn.style.display = 'inline-block';
+  copiedNote.textContent = '';
+}
+
+async function copyCode(){
+  const text = codeBox.textContent;
+  try {
+    await navigator.clipboard.writeText(text);
+    copiedNote.textContent = '✅ Copied! Paste it into your assignment.';
+  } catch(e){
+    // Fallback for browsers/permissions without Clipboard API
+    const r = document.createRange(); r.selectNode(codeBox);
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    try { document.execCommand('copy'); copiedNote.textContent = '✅ Copied! Paste it into your assignment.'; }
+    catch(e2){ copiedNote.textContent = 'Select the code above and copy it manually (Ctrl/Cmd+C).'; }
+    sel.removeAllRanges();
+  }
+}
+
+document.getElementById('turninBtn').addEventListener('click', openModal);
+document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+genBtn.addEventListener('click', generateCode);
+copyBtn.addEventListener('click', copyCode);
+modal.addEventListener('click', (e)=>{ if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeModal(); });
+// Regenerate if they change identity after already generating
+[nameInput, emailInput].forEach(inp => inp.addEventListener('input', ()=>{
+  if (codeField.style.display === 'block'){ codeField.style.display='none'; copyBtn.style.display='none'; }
+}));
+
+/* ---------- Boot ---------- */
+discovered = load();
+renderShelf();
+renderSlots();
+renderCounter();
+</script>
+</body>
+</html>
